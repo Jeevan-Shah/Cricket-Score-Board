@@ -1,0 +1,310 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+// Function prototypes
+void first_inning(char batting_team[20], char bowling_team[20]);
+int second_inning(char batting_team[20], char bowling_team[20]);
+int authenticate();
+void save_match_details(char team1[20], char team2[20], char winner[20], int score1, int score2);
+void update_leaderboard(char winning_team[20]);
+void display_leaderboard();
+int bat_first;
+
+#define LEADERBOARD_FILE "leaderboard.txt"
+
+// Global variables
+char Team1[20], Team2[20], winningTeam[20];
+int target = 0, overs, score, wickets, balls, p_balls;
+float runrate, c_overs;
+
+int main() {
+    int choice;
+
+    // Authenticate user
+    if (!authenticate()) {
+        printf("Exiting program due to failed authentication.\n");
+        return 0;
+    }
+
+    do {
+        printf("\n--- RJJ Cricket Scorer ---\n");
+        printf("1. Start a New Match\n");
+        printf("2. View Leaderboard\n");
+        printf("3. Exit\n");
+        printf("Enter your choice: ");
+        scanf("%d", &choice);
+
+        switch (choice) {
+            case 1:
+                printf("Enter Name of Team 1: ");
+                scanf("%s", Team1);
+                printf("Enter Name of Team 2: ");
+                scanf("%s", Team2);
+                printf("Enter the number of overs: ");
+                scanf("%d", &overs);
+                balls = overs * 6;
+
+                int toss, bat_first;
+            re:
+                printf("\nWhich team is batting first?\n");
+                printf("[1] %s\n[2] %s\n", Team1, Team2);
+                scanf("%d", &toss);
+
+                switch (toss) {
+                    case 1:
+                        printf("%s is batting first.\n", Team1);
+                        first_inning(Team1, Team2);
+                        bat_first = 1;
+                        break;
+                    case 2:
+                        printf("%s is batting first.\n", Team2);
+                        first_inning(Team2, Team1);
+                        bat_first = 2;
+                        break;
+                    default:
+                        printf("Invalid choice! Please enter 1 or 2.\n");
+                        goto re;
+                }
+
+                if (target > 0) {
+                    if (bat_first == 1) {
+                        second_inning(Team2, Team1);
+                    } else {
+                        second_inning(Team1, Team2);
+                    }
+                }
+
+                update_leaderboard(winningTeam);
+                break;
+
+            case 2:
+                display_leaderboard();
+                break;
+
+            case 3:
+                printf("Thank you for using RJJ Cricket Scorer!\n");
+                break;
+
+            default:
+                printf("Invalid choice! Please try again.\n");
+        }
+    } while (choice != 3);
+
+    return 0;
+}
+
+// Function to authenticate user
+int authenticate() {
+    char username[20], password[20];
+    const char correct_username[] = "RJJ";
+    const char correct_password[] = "2006";
+
+    printf("Enter Username: ");
+    scanf("%s", username);
+    printf("Enter Password: ");
+    scanf("%s", password);
+
+    if (strcmp(username, correct_username) == 0 && strcmp(password, correct_password) == 0) {
+        printf("Login Successful!\n");
+        return 1;
+    } else {
+        printf("Invalid Credentials!\n");
+        return 0;
+    }
+}
+
+// Function to save match details to a file
+void save_match_details(char team1[20], char team2[20], char winner[20], int score1, int score2) {
+    FILE *fp = fopen("match_results.txt", "a");
+    if (fp == NULL) {
+        printf("Error opening file to save match details!\n");
+        return;
+    }
+
+    fprintf(fp, "Match Result:\n");
+    fprintf(fp, "Team 1: %s | Score: %d\n", team1, score1);
+    fprintf(fp, "Team 2: %s | Score: %d\n", team2, score2);
+    fprintf(fp, "Winner: %s\n", winner);
+    fprintf(fp, "-------------------------------------------\n");
+    fclose(fp);
+    printf("Match details saved successfully!\n");
+}
+
+// Function to simulate the first inning
+void first_inning(char batting_team[20], char bowling_team[20]) {
+    p_balls = 0;
+    score = 0;
+    wickets = 0;
+    c_overs = 0;
+
+    printf("\n:-------------- First Innings ----------------:\n");
+    for (int j = 0; j < balls; j++) {
+        printf("Last ball...\n");
+        printf("[1] Normal delivery\n[2] No ball / Wide (Extra run)\nChoice: ");
+        int scorer;
+        scanf("%d", &scorer);
+
+        printf("Runs on last ball:\n");
+        printf("[0] Dot ball\n[1] 1 run\n[2] 2 runs\n[3] 3 runs\n[4] 4 \n[5] 6\n[6] Wicket!\nChoice: ");
+        int r;
+        scanf("%d", &r);
+
+        if (scorer == 1) {
+            p_balls += 1;
+            c_overs = p_balls / 6 + (p_balls % 6) * 0.1;
+        } else if (scorer == 2) {
+            score += 1;
+        } else {
+            printf("Invalid input, try again.\n");
+            j--;
+            continue;
+        }
+
+        switch (r) {
+            case 0: break;
+            case 1: score += 1; break;
+            case 2: score += 2; break;
+            case 3: score += 3; break;
+            case 4: score += 4; break;
+            case 5: score += 6; break;
+            case 6: wickets += 1; break;
+            default:
+                printf("Invalid input, try again.\n");
+                j--;
+                continue;
+        }
+
+        runrate = (float) score / (p_balls / 6.0);
+        printf("\nSCORE: %s | %d-%d | Overs: %.1f | Run Rate: %.2f\n", batting_team, score, wickets, c_overs, runrate);
+        if (wickets == 10 || p_balls == balls) {
+            target = score + 1;
+            printf("\nFirst Innings Over! Target for %s is %d runs.\n", bowling_team, target);
+            break;
+        }
+    }
+}
+
+// Function to simulate the second inning
+int second_inning(char batting_team[20], char bowling_team[20]) {
+    p_balls = 0;
+    c_overs = 0;
+    score = 0;
+    wickets = 0;
+
+    printf("\n:-------------- Second Innings ----------------:\n");
+    for (int j = 0; j < balls; j++) {
+        printf("Last ball...\n");
+        printf("[1] Normal delivery\n[2] No ball / Wide (Extra run)\nChoice: ");
+        int scorer;
+        scanf("%d", &scorer);
+
+        printf("Runs on last ball:\n");
+        printf("[0] Dot ball\n[1] 1 run\n[2] 2 runs\n[3] 3 runs\n[4] 4 \n[5] 6\n[6] Wicket!\nChoice: ");
+        int r;
+        scanf("%d", &r);
+
+        if (scorer == 1) {
+            p_balls += 1;
+            c_overs = p_balls / 6 + (p_balls % 6) * 0.1;
+        } else if (scorer == 2) {
+            score += 1;
+        } else {
+            printf("Invalid input, try again.\n");
+            j--;
+            continue;
+        }
+
+        switch (r) {
+            case 0: break;
+            case 1: score += 1; break;
+            case 2: score += 2; break;
+            case 3: score += 3; break;
+            case 4: score += 4; break;
+            case 5: score += 6; break;
+            case 6: wickets += 1; break;
+            default:
+                printf("Invalid input, try again.\n");
+                j--;
+                continue;
+        }
+
+        runrate = (float) score / (p_balls / 6.0);
+        printf("\nSCORE: %s | %d-%d | Overs: %.1f | Target: %d | Runs Needed: %d in %d balls\n", batting_team, score, wickets, c_overs, target, target - score, balls - p_balls);
+
+        if (score >= target) {
+            printf("\n%s WON THE MATCH!\n", batting_team);
+            strcpy(winningTeam, batting_team);
+            save_match_details(Team1, Team2, winningTeam, bat_first == 1 ? target - 1 : score, bat_first == 2 ? target - 1 : score);
+            return 0;
+        }
+
+        if (wickets == 10 || p_balls == balls) {
+            printf("\n%s WON THE MATCH!\n", bowling_team);
+            strcpy(winningTeam, bowling_team);
+            save_match_details(Team1, Team2, winningTeam, bat_first == 1 ? target - 1 : score, bat_first == 2 ? target - 1 : score);
+            return 0;
+        }
+    }
+    return 0;
+}
+
+// Function to update the leaderboard
+void update_leaderboard(char winning_team[20]) {
+    FILE *fp = fopen(LEADERBOARD_FILE, "r+");
+    if (fp == NULL) {
+        fp = fopen(LEADERBOARD_FILE, "w");
+        if (fp == NULL) {
+            printf("Error creating leaderboard file!\n");
+            return;
+        }
+    }
+
+    char line[50], team[20];
+    int wins, found = 0;
+    FILE *temp_fp = fopen("temp_leaderboard.txt", "w");
+    if (temp_fp == NULL) {
+        printf("Error creating temporary file!\n");
+        fclose(fp);
+        return;
+    }
+
+    while (fgets(line, sizeof(line), fp)) {
+        sscanf(line, "%s %d", team, &wins);
+        if (strcmp(team, winning_team) == 0) {
+            fprintf(temp_fp, "%s %d\n", team, wins + 1);
+            found = 1;
+        } else {
+            fprintf(temp_fp, "%s %d\n", team, wins);
+        }
+    }
+
+    if (!found) {
+        fprintf(temp_fp, "%s %d\n", winning_team, 1);
+    }
+
+    fclose(fp);
+    fclose(temp_fp);
+
+    remove(LEADERBOARD_FILE);
+    rename("temp_leaderboard.txt", LEADERBOARD_FILE);
+}
+
+// Function to display the leaderboard
+void display_leaderboard() {
+    FILE *fp = fopen(LEADERBOARD_FILE, "r");
+    if (fp == NULL) {
+        printf("No leaderboard data available!\n");
+        return;
+    }
+
+    char team[20];
+    int wins;
+    printf("\n:-------------- Leaderboard ----------------:\n");
+    printf("Team Name\tWins\n");
+    printf("-------------------------------------------\n");
+    while (fscanf(fp, "%s %d", team, &wins) != EOF) {
+        printf("%-15s %d\n", team, wins);
+    }
+    fclose(fp);
+}

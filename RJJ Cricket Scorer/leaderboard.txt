@@ -1,0 +1,6 @@
+rcb 2
+csk 3
+kkr 1
+srh 1
+rak 1
+ind 1
